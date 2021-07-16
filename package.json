@@ -1,0 +1,41 @@
+{
+  "name": "game_sample",
+  "version": "1.0.2",
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@dreamirl/dreamengine": "github:dreamirl/dreamengine"
+  },
+  "devDependencies": {
+    "autoprefixer": "^9.7.3",
+    "cross-env": "^5.2.1",
+    "parcel-bundler": "^1.12.4",
+    "parcel-plugin-asset-copier": "^1.0.0",
+    "parcel-plugin-bundle-visualiser": "^1.2.0",
+    "postcss-modules": "^1.5.0",
+    "prettier": "^1.18.2"
+  },
+  "scripts": {
+    "start": "cross-env npm run dev",
+    "dev": "cross-env parcel html/browser.html -d dist/dev/",
+    "build": "cross-env parcel build html/browser.html -d dist/prod/",
+    "dev:electron": "cross-env NODE_ENV=electron parcel html/browser.html -d dist/dev-electron/",
+    "build:electron": "cross-env NODE_ENV=electron parcel build html/browser.html -d dist/prod-electron/",
+    "format": "prettier --write \"**/*.{js,json,ts,tsx,md}\"",
+    "link": "cross-env npm link @dreamirl/dreamengine",
+    "whipe": "cross-env rm -rf .cache/ && rm -rf dist/",
+    "reset": "npm i && npm run link && npm run whipe"
+  },
+  "alias": {
+    "Game": "./src/Game.js",
+    "inputs": "./src/data/inputs",
+    "audios": "./src/data/audios",
+    "dictionary": "./src/data/dictionary",
+    "achievements": "./src/data/achievements",
+    "images": "./src/data/images"
+  },
+  "assetsPath": "./assets/"
+}
