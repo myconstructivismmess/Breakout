@@ -172,7 +172,6 @@ Game.onload = function () {
         },
         x: 0,
         y: 0,
-        interactive: true,
         automatisms: [["updateSpawnAnimationTime"]],
         updateSpawnAnimationTime: function () {
             if (!this.vars.spawnAnimation.completed) {
@@ -198,7 +197,6 @@ Game.onload = function () {
         },
         x: Game.properties.screen.size.width / 2,
         y: -Game.properties.paddle.verticalOffset,
-        interactive: true,
         automatisms: [["updateMouse"], ["updateKeys"], ["updateSpawnAnimation"]],
         renderer: new DE.RectRenderer(Game.properties.paddle.width, Game.properties.paddle.height, Game.properties.paddle.colors.default, {
             fill: true,
@@ -347,16 +345,21 @@ Game.onload = function () {
     let xOffset = Game.properties.screen.size.width / 2 - (Game.properties.bricks.width * Game.properties.bricks.rows + Game.properties.bricks.spacing * (Game.properties.bricks.rows - 1)) / 2 + Game.properties.bricks.width / 2;
     for (let x = 0; x < Game.properties.bricks.rows; x++) {
         for (let y = 0; y < Game.properties.bricks.lines; y++) {
+            let initialRotation = Math.PI / 4 * (Math.random() > 0.5 ? -1 : 1);
             Game.gameObjects.bricks.push(new DE.GameObject({
                 vars: {
                     active: true,
                     spawnAnimation: {
-                        initialY: 0,
-                        targetY: 0
+                        initialY: Game.properties.walls.width + (Game.properties.bricks.spacing + Game.properties.bricks.height / 2) + y * (Game.properties.bricks.height + Game.properties.bricks.spacing) - Game.properties.screen.size.height,
+                        targetY: Game.properties.walls.width + (Game.properties.bricks.spacing + Game.properties.bricks.height / 2) + y * (Game.properties.bricks.height + Game.properties.bricks.spacing),
+                        initialRotation: initialRotation,
+                        targetRotation: 0
                     }
                 },
+                rotation: initialRotation,
                 x: xOffset + x * (Game.properties.bricks.width + Game.properties.bricks.spacing),
-                y: Game.properties.walls.width + (Game.properties.bricks.spacing + Game.properties.bricks.height / 2) + y * (Game.properties.bricks.height + Game.properties.bricks.spacing),
+                y: Game.properties.walls.width + (Game.properties.bricks.spacing + Game.properties.bricks.height / 2) + y * (Game.properties.bricks.height + Game.properties.bricks.spacing) - Game.properties.screen.size.height,
+                automatisms: [["updateSpawnAnimation"]],
                 renderer: new DE.RectRenderer(Game.properties.bricks.width, Game.properties.bricks.height, Game.properties.bricks.colors.default, {
                     x: -Game.properties.bricks.width / 2,
                     y: -Game.properties.bricks.height / 2,
@@ -393,6 +396,12 @@ Game.onload = function () {
                     this.renderer.updateRender({
                         fill: false
                     });
+                },
+                updateSpawnAnimation: function () {
+                    if (!Game.gameObjects.scriptHolder.vars.spawnAnimation.completed) {
+                        this.y = this.vars.spawnAnimation.initialY + Game.gameObjects.scriptHolder.vars.spawnAnimation.easedTime * (this.vars.spawnAnimation.targetY - this.vars.spawnAnimation.initialY);
+                        this.rotation = this.vars.spawnAnimation.initialRotation + Game.gameObjects.scriptHolder.vars.spawnAnimation.easedTime * (this.vars.spawnAnimation.targetRotation - this.vars.spawnAnimation.initialRotation);
+                    }
                 }
             }));
         }
