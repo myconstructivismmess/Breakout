@@ -79,7 +79,7 @@ Game.properties = {
         },
         hitAnimation: {
             speed: 0.06,
-            size: 80,
+            size: 110,
             easingFunction: function (t) {
                 return Math.pow(1 - t, 5);
             }
@@ -178,9 +178,8 @@ Game.onload = function() {
         });
     }
 
-    Game.die = function(ball) {
+    Game.die = function() {
         console.log("you died");
-        ball.vars.stuck = true;
     };
 
     // Game Objects
@@ -382,12 +381,13 @@ Game.onload = function() {
                 Game.properties.paddle.verticalOffset -
                 Game.properties.paddle.height -
                 Game.properties.paddle.ballSpacing,
+            rotation: 0,
             renderer: new DE.RectRenderer(Game.properties.balls.size, Game.properties.balls.size, Game.properties.balls.colors.default, {
                 fill: true,
                 x: -Game.properties.balls.size / 2,
                 y: -Game.properties.balls.size / 2,
             }),
-            automatisms: [["updatePosition"], ["updateHitAnimation"] /*["updateRotation"]*/],
+            automatisms: [["updatePosition"], ["updateHitAnimation"], ["updateRotation"]],
             updatePosition: function() {
                 if (!this.vars.stuck) {
                     this.x += this.vars.velocity.x;
@@ -434,11 +434,20 @@ Game.onload = function() {
                     }
 
                     if (this.y >= Game.properties.screen.size.height) {
-                        Game.die(this);
+                        this.vars.stuck = true;
+                        this.triggerHitAnimation();
+                        Game.die();
                     }
                 } else {
                     this.x = Game.gameObjects.paddle.x;
                     this.y = Game.gameObjects.paddle.y - Game.properties.paddle.height - Game.properties.paddle.ballSpacing;
+                }
+            },
+            updateRotation: function() {
+                if (this.vars.stuck) {
+                    this.rotation = 0;
+                } else {
+                    this.rotation = Math.atan2(this.vars.velocity.y, this.vars.velocity.x);
                 }
             },
             updateHitAnimation: function () {
