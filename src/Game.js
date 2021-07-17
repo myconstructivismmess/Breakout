@@ -88,6 +88,22 @@ Game.properties = {
     confetti: {},
 };
 
+// Math
+Game.collisionDetectionFunction = function(line1, line2) {
+    let denominator = ((line1[1].x - line1[0].x) * (line2[1].y - line2[0].y)) - ((line1[1].y - line1[0].y) * (line2[1].x - line2[0].x));
+    let numerator1 = ((line1[0].y - line2[0].y) * (line2[1].x - line2[0].x)) - ((line1[0].x - line2[0].x) * (line2[1].y - line2[0].y));
+    let numerator2 = ((line1[0].y - line2[0].y) * (line1[1].x - line1[0].x)) - ((line1[0].x - line2[0].x) * (line1[1].y - line1[0].y));
+
+    if (denominator === 0) {
+        return numerator1 === 0 && numerator2 === 0;
+    }
+
+    let r = numerator1 / denominator;
+    let s = numerator2 / denominator;
+
+    return (0 <= r && r <= 1) && (0 <= s && s <= 1);
+}
+
 // Initialization
 Game.init = function() {
     Game.render = new DE.Render("render", {
@@ -231,22 +247,41 @@ Game.onload = function() {
                 this.x = this.clamp(this.x + movement);
             }
         },
-        checkCollision: function(position, velocity) {
+        checkCollision: function(ballLines, velocity) {
             let collision = false;
             let newVelocity = { x: velocity.x, y: velocity.y };
 
-            if (
-                position.x >= this.x - this.vars.size.width / 2 &&
-                position.x <= this.x + this.vars.size.width / 2 &&
-                position.y >= this.y - this.vars.size.height / 2 - Game.properties.balls.size / 2 &&
-                position.y <= this.y - this.vars.size.height / 2
-            ) {
+            let lines = {
+                top: [
+                    { x: this.x - this.vars.size.width / 2, y: this.y - this.vars.size.height },
+                    { x: this.x + this.vars.size.width / 2, y: this.y - this.vars.size.height }
+                ],
+                left: [
+                    { x: this.x - this.vars.size.width / 2, y: this.y - this.vars.size.height },
+                    { x: this.x - this.vars.size.width / 2, y: this.y }
+                ],
+                right: [
+                    { x: this.x + this.vars.size.width / 2, y: this.y - this.vars.size.height },
+                    { x: this.x + this.vars.size.width / 2, y: this.y }
+                ],
+            }
+
+            if (Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.top)) { // Top
                 collision = true;
                 newVelocity.y = -Math.abs(velocity.y);
             }
 
+            if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.left)) { // Left
+                collision = true;
+                newVelocity.x = -Math.abs(velocity.x);
+            }
+
+            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.right)) { // Right
+                collision = true;
+                newVelocity.x = Math.abs(velocity.x);
+            }
+
             if (collision) {
-                // Trigger confetti
                 return newVelocity;
             }
         },
@@ -289,24 +324,38 @@ Game.onload = function() {
                 fill: true,
             }),
         ],
-        checkCollision: function(position, velocity) {
+        checkCollision: function(ballLines, velocity) {
             let collision = false;
             let newVelocity = { x: velocity.x, y: velocity.y };
 
-            if (velocity.x < 0 && position.x <= Game.properties.walls.width) {
-                // Left
-                collision = true;
-                newVelocity.x = Math.abs(velocity.x);
-            } else if (velocity.x > 0 && position.x >= Game.properties.screen.size.width - Game.properties.walls.width) {
-                // Right
-                collision = true;
-                newVelocity.x = -Math.abs(velocity.x);
+            let lines = {
+                top: [
+                    { x: Game.properties.walls.width, y: Game.properties.walls.width },
+                    { x: Game.properties.screen.size.width - Game.properties.walls.width, y: Game.properties.walls.width }
+                ],
+                left: [
+                    { x: Game.properties.walls.width, y: Game.properties.walls.width },
+                    { x: Game.properties.walls.width, y: Game.properties.screen.size.height },
+                ],
+                right: [
+                    { x: Game.properties.screen.size.width - Game.properties.walls.width, y: Game.properties.walls.width },
+                    { x: Game.properties.screen.size.width - Game.properties.walls.width, y: Game.properties.screen.size.height }
+                ],
             }
 
-            if (velocity.y < 0 && position.y <= Game.properties.walls.width) {
-                // Top
+            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.topRightCorner, lines.top)) { // Top
                 collision = true;
                 newVelocity.y = Math.abs(velocity.y);
+            }
+
+            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.left)) { // Left
+                collision = true;
+                newVelocity.x = Math.abs(velocity.x);
+            }
+
+            if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.right)) { // Right
+                collision = true;
+                newVelocity.x = -Math.abs(velocity.x);
             }
 
             if (collision) {
@@ -344,20 +393,40 @@ Game.onload = function() {
                     this.x += this.vars.velocity.x;
                     this.y += this.vars.velocity.y;
 
-                    let velocityWalls = Game.gameObjects.walls.checkCollision({ x: this.x, y: this.y }, this.vars.velocity);
+                    let halfSize = Game.properties.balls.size / 2;
+                    let ballLines = {
+                        topLeftCorner: [
+                            { x: this.x - halfSize, y: this.y - halfSize },
+                            { x: this.x - halfSize + this.vars.velocity.x, y: this.y - halfSize + this.vars.velocity.y }
+                        ],
+                        topRightCorner: [
+                            { x: this.x + halfSize, y: this.y - halfSize },
+                            { x: this.x + halfSize + this.vars.velocity.x, y: this.y - halfSize + this.vars.velocity.y }
+                        ],
+                        bottomLeftCorner: [
+                            { x: this.x - halfSize, y: this.y + halfSize },
+                            { x: this.x - halfSize + this.vars.velocity.x, y: this.y + halfSize + this.vars.velocity.y }
+                        ],
+                        bottomRightCorner: [
+                            { x: this.x + halfSize, y: this.y + halfSize },
+                            { x: this.x + halfSize + this.vars.velocity.x, y: this.y + halfSize + this.vars.velocity.y }
+                        ]
+                    }
+
+                    let velocityWalls = Game.gameObjects.walls.checkCollision(ballLines, this.vars.velocity);
                     if (velocityWalls) {
                         this.vars.velocity = velocityWalls;
                         this.triggerHitAnimation();
                     }
 
-                    let velocityPaddle = Game.gameObjects.paddle.checkCollision({ x: this.x, y: this.y }, this.vars.velocity);
+                    let velocityPaddle = Game.gameObjects.paddle.checkCollision(ballLines, this.vars.velocity);
                     if (velocityPaddle) {
                         this.vars.velocity = velocityPaddle;
                         this.triggerHitAnimation();
                     }
 
                     for (let i = 0; i < Game.gameObjects.bricks.length; i++) {
-                        let velocityBrick = Game.gameObjects.bricks[i].checkCollision({ x: this.x, y: this.y }, this.vars.velocity);
+                        let velocityBrick = Game.gameObjects.bricks[i].checkCollision(ballLines, this.vars.velocity);
                         if (velocityBrick) {
                             this.vars.velocity = velocityBrick;
                             this.triggerHitAnimation();
@@ -437,6 +506,10 @@ Game.onload = function() {
                             initialRotation: initialRotation,
                             targetRotation: 0,
                         },
+                        size: {
+                            width: Game.properties.bricks.width,
+                            height: Game.properties.bricks.height
+                        }
                     },
                     rotation: initialRotation,
                     x: xOffset + x * (Game.properties.bricks.width + Game.properties.bricks.spacing),
@@ -469,51 +542,48 @@ Game.onload = function() {
                             }
                         }
                     },
-                    checkCollision: function(position, velocity) {
+                    checkCollision: function(ballLines, velocity) {
                         if (this.vars.active) {
                             let collision = false;
                             let newVelocity = { x: velocity.x, y: velocity.y };
 
-                            if (
-                                velocity.y < 0 &&
-                                this.x - Game.properties.bricks.width / 2 <= position.x &&
-                                position.x <= this.x + Game.properties.bricks.width / 2 &&
-                                this.y + Game.properties.bricks.height / 2 <= position.y &&
-                                position.y <= this.y + Game.properties.bricks.height / 2 + Game.properties.balls.size / 2
-                            ) {
-                                // Bottom
-                                collision = true;
-                                newVelocity.y = Math.abs(velocity.y);
-                            } else if (
-                                0 < velocity.y &&
-                                this.x - Game.properties.bricks.width / 2 <= position.x &&
-                                position.x <= this.x + Game.properties.bricks.width / 2 &&
-                                this.y - Game.properties.bricks.height / 2 - Game.properties.balls.size / 2 <= position.y &&
-                                position.y <= this.y - Game.properties.bricks.height / 2
-                            ) {
-                                // Top
+                            let lines = {
+                                top: [
+                                    { x: this.x - this.vars.size.width / 2, y: this.y - this.vars.size.height / 2 },
+                                    { x: this.x + this.vars.size.width / 2, y: this.y - this.vars.size.height / 2 }
+                                ],
+                                bottom: [
+                                    { x: this.x - this.vars.size.width / 2, y: this.y + this.vars.size.height / 2 },
+                                    { x: this.x + this.vars.size.width / 2, y: this.y + this.vars.size.height / 2 }
+                                ],
+                                left: [
+                                    { x: this.x - this.vars.size.width / 2, y: this.y - this.vars.size.height / 2 },
+                                    { x: this.x - this.vars.size.width / 2, y: this.y + this.vars.size.height / 2 }
+                                ],
+                                right: [
+                                    { x: this.x + this.vars.size.width / 2, y: this.y - this.vars.size.height / 2 },
+                                    { x: this.x + this.vars.size.width / 2, y: this.y + this.vars.size.height / 2 }
+                                ],
+                            }
+
+                            if (Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.top)) { // Top
                                 collision = true;
                                 newVelocity.y = -Math.abs(velocity.y);
-                            } else if (
-                                velocity.x < 0 &&
-                                this.y - Game.properties.bricks.height / 2 <= position.y &&
-                                position.y <= this.y + Game.properties.bricks.height / 2 &&
-                                this.x + Game.properties.bricks.width / 2 <= position.x &&
-                                position.x <= this.x + Game.properties.bricks.width / 2 + Game.properties.balls.size / 2
-                            ) {
-                                // Right
+                            }
+
+                            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.bottom) || Game.collisionDetectionFunction(ballLines.topRightCorner, lines.bottom)) { // Bottom
                                 collision = true;
-                                newVelocity.x = Math.abs(velocity.x);
-                            } else if (
-                                0 < velocity.x &&
-                                this.y - Game.properties.bricks.height / 2 <= position.y &&
-                                position.y <= this.y + Game.properties.bricks.height / 2 &&
-                                this.x - Game.properties.bricks.width / 2 - Game.properties.balls.size / 2 <= position.x &&
-                                position.x <= this.x - Game.properties.bricks.width / 2
-                            ) {
-                                // Left
+                                newVelocity.y = Math.abs(velocity.y);
+                            }
+
+                            if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.left)) { // Left
                                 collision = true;
                                 newVelocity.x = -Math.abs(velocity.x);
+                            }
+
+                            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.right)) { // Right
+                                collision = true;
+                                newVelocity.x = Math.abs(velocity.x);
                             }
 
                             if (collision) {
