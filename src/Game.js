@@ -44,12 +44,31 @@ Game.properties = {
         width: 20, // px
     },
     paddle: {
-        width: 300, // px
+        width: 250, // px
         height: 80, // px
         verticalOffset: 50, // px Vertical offset from the bottom of the screen to the paddle
         ballSpacing: 60, // px Space between a stuck ball and the paddle
         colors: {
-            default: "0xECCBC0",
+            default: "0xf28109",
+        },
+        eyes: {
+            radius: 35,
+            offsets: [
+                { // From Top Left Corner
+                    x: 50,
+                    y: 35
+                },
+                { // From Top Right Corner
+                    x: -50,
+                    y: 35
+                }
+            ],
+            color: "0xffffff",
+            iris: {
+                radius: 20,
+                spacing: 5,
+                color: "0x000000"
+            }
         },
         keyboard: {
             speed: 30, // Movement speed via keyboard in px per frame
@@ -208,6 +227,7 @@ Game.onload = function() {
     Game.gameObjects.paddle = new DE.GameObject({
         vars: {
             keys: { left: 0, right: 0, active: true },
+            trackedBallIndex: 0,
             mouse: {
                 target: 0,
             },
@@ -218,12 +238,32 @@ Game.onload = function() {
         },
         x: Game.properties.screen.size.width / 2,
         y: -Game.properties.paddle.verticalOffset,
-        automatisms: [["updateMouse"], ["updateKeys"], ["updateSpawnAnimation"]],
-        renderer: new DE.RectRenderer(Game.properties.paddle.width, Game.properties.paddle.height, Game.properties.paddle.colors.default, {
-            fill: true,
-            x: -Game.properties.paddle.width / 2,
-            y: -Game.properties.paddle.height,
-        }),
+        automatisms: [["updateMouse"], ["updateKeys"], ["updateSpawnAnimation"], ["updateEyes"]],
+        renderers: [
+            new DE.RectRenderer(Game.properties.paddle.width, Game.properties.paddle.height, Game.properties.paddle.colors.default, {
+                fill: true,
+                x: -Game.properties.paddle.width / 2,
+                y: -Game.properties.paddle.height,
+            }),
+            new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [-Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[0].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[0].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}]),
+            new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[1].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[1].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}])
+        ],
+        gameObjects: [
+            new DE.GameObject({
+                x: 0,
+                y: 0,
+                renderer: new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.iris.color}, {"drawCircle": [0, 0, Game.properties.paddle.eyes.iris.radius]}, {"endFill": []}])
+            }),
+            new DE.GameObject({
+                x: 0,
+                y: 0,
+                renderer: new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.iris.color}, {"drawCircle": [0, 0, Game.properties.paddle.eyes.iris.radius]}, {"endFill": []}])
+            }),
+        ],
+            //new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [-Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[0].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[0].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}]),
+            /*new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[1].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[1].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}]),
+            new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.iris.color}, {"drawCircle": [-Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[0].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[0].y - Game.properties.paddle.eyes.radius + Game.properties.paddle.eyes.iris.radius + Game.properties.paddle.eyes.iris.spacing, Game.properties.paddle.eyes.iris.radius]}, {"endFill": []}]),
+            new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.iris.color}, {"drawCircle": [Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[1].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[1].y - Game.properties.paddle.eyes.radius + Game.properties.paddle.eyes.iris.radius + Game.properties.paddle.eyes.iris.spacing, Game.properties.paddle.eyes.iris.radius]}, {"endFill": []}])*/
         clamp: function(x) {
             return Math.min(
                 Math.max(x, Game.properties.walls.width + Game.properties.paddle.width / 2),
@@ -244,6 +284,21 @@ Game.onload = function() {
             if (Game.gameObjects.scriptHolder.vars.spawnAnimation.completed) {
                 let movement = ((this.vars.keys.left > 0 ? -1 : 0) + (this.vars.keys.right > 0 ? 1 : 0)) * Game.properties.paddle.keyboard.speed;
                 this.x = this.clamp(this.x + movement);
+            }
+        },
+        updateEyes: function() {
+            for (let i = 0; i < 2; i++) {
+                let eyeBallOffset = {
+                    x: Game.gameObjects.balls[this.vars.trackedBallIndex].x - (this.x + (i === 0 ? -1 : 1) * (Game.properties.paddle.width / 2) + Game.properties.paddle.eyes.offsets[i].x),
+                    y: Game.gameObjects.balls[this.vars.trackedBallIndex].y - (this.y - Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[i].y)
+                };
+
+                let eyeDistanceFromBall = Math.sqrt(Math.pow(eyeBallOffset.x, 2) + Math.pow(eyeBallOffset.y, 2));
+
+                let eyeBallOffsetNormalized = {x: eyeBallOffset.x / eyeDistanceFromBall, y: eyeBallOffset.y / eyeDistanceFromBall};
+
+                this.gameObjects[i].x = (i === 0 ? -1 : 1) * (Game.properties.paddle.width / 2) + Game.properties.paddle.eyes.offsets[i].x + eyeBallOffsetNormalized.x * (Game.properties.paddle.eyes.radius - Game.properties.paddle.eyes.iris.radius - Game.properties.paddle.eyes.iris.spacing);
+                this.gameObjects[i].y = -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[i].y + eyeBallOffsetNormalized.y * (Game.properties.paddle.eyes.radius - Game.properties.paddle.eyes.iris.radius - Game.properties.paddle.eyes.iris.spacing);
             }
         },
         checkCollision: function(ballLines, velocity) {
