@@ -65,7 +65,7 @@ Game.properties = {
             ],
             color: "0xffffff",
             iris: {
-                radius: 20,
+                radius: 23,
                 spacing: 5,
                 color: "0x000000"
             }
@@ -158,11 +158,11 @@ Game.onload = function() {
     };
 
     // Mouse
-    Game.camera.pointermove = function(pos, e) {
+    Game.camera.pointermove = function(pos) {
         Game.gameObjects.paddle.vars.mouse.target = pos.x;
         Game.gameObjects.paddle.vars.keys.active = false;
     };
-    Game.camera.pointerup = function(pos, e) {
+    Game.camera.pointerup = function() {
         Game.gameObjects.paddle.launchBall();
     };
 
@@ -287,18 +287,17 @@ Game.onload = function() {
             }
         },
         updateEyes: function() {
+            let eyesBallOffset = {
+                x: Game.gameObjects.balls[this.vars.trackedBallIndex].x - ((this.x - Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[0].x) + (this.x + Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[1].x)) / 2,
+                y: Game.gameObjects.balls[this.vars.trackedBallIndex].y - ((this.y - Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[0].y) + (this.y - Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[1].y)) / 2
+            };
+
+            let eyesDistanceFromBall = Math.sqrt(Math.pow(eyesBallOffset.x, 2) + Math.pow(eyesBallOffset.y, 2));
+            let eyesBallOffsetNormalized = {x: eyesBallOffset.x / eyesDistanceFromBall, y: eyesBallOffset.y / eyesDistanceFromBall};
+
             for (let i = 0; i < 2; i++) {
-                let eyeBallOffset = {
-                    x: Game.gameObjects.balls[this.vars.trackedBallIndex].x - (this.x + (i === 0 ? -1 : 1) * (Game.properties.paddle.width / 2) + Game.properties.paddle.eyes.offsets[i].x),
-                    y: Game.gameObjects.balls[this.vars.trackedBallIndex].y - (this.y - Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[i].y)
-                };
-
-                let eyeDistanceFromBall = Math.sqrt(Math.pow(eyeBallOffset.x, 2) + Math.pow(eyeBallOffset.y, 2));
-
-                let eyeBallOffsetNormalized = {x: eyeBallOffset.x / eyeDistanceFromBall, y: eyeBallOffset.y / eyeDistanceFromBall};
-
-                this.gameObjects[i].x = (i === 0 ? -1 : 1) * (Game.properties.paddle.width / 2) + Game.properties.paddle.eyes.offsets[i].x + eyeBallOffsetNormalized.x * (Game.properties.paddle.eyes.radius - Game.properties.paddle.eyes.iris.radius - Game.properties.paddle.eyes.iris.spacing);
-                this.gameObjects[i].y = -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[i].y + eyeBallOffsetNormalized.y * (Game.properties.paddle.eyes.radius - Game.properties.paddle.eyes.iris.radius - Game.properties.paddle.eyes.iris.spacing);
+                this.gameObjects[i].x = (i === 0 ? -1 : 1) * (Game.properties.paddle.width / 2) + Game.properties.paddle.eyes.offsets[i].x + eyesBallOffsetNormalized.x * (Game.properties.paddle.eyes.radius - Game.properties.paddle.eyes.iris.radius - Game.properties.paddle.eyes.iris.spacing);
+                this.gameObjects[i].y = -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[i].y + eyesBallOffsetNormalized.y * (Game.properties.paddle.eyes.radius - Game.properties.paddle.eyes.iris.radius - Game.properties.paddle.eyes.iris.spacing);
             }
         },
         checkCollision: function(ballLines, velocity) {
