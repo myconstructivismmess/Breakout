@@ -1,27 +1,92 @@
 /**
  * Author
  @Inateno / http://inateno.com / http://dreamirl.com
+ @TomROUET / https://tomrouet.fr
 
  * ContributorsList
  @Inateno
-
- ***
- simple Game declaration
  **/
 import DE from "@dreamirl/dreamengine";
-var Game = {};
+const Game = {};
 
 Game.render = null;
 Game.scene = null;
+
+// Game Objects
 Game.gameObjects = {
-    paddle: null,
-    bricks: null,
-    balls: null,
     walls: null,
-    confettis: null,
-    dustParticles: null,
-    scriptHolder: null,
-};
+    paddle: null,
+    balls: null,
+    bricks: null
+}
+
+// Particles
+Game.particles = {
+    objects: {
+        confetti: [],
+        dust: []
+    },
+    triggerConfetti: function(position, direction) {
+        /**
+         * Trigger confetti particles.
+         * @param {object} position Object containing an x and y component representing the starting position of confetti particles.
+         * @param {number} direction Number representing the angle in which confetti particles are going to be launched in radians.
+         **/
+        for (let confettiObjectIndex = 0; confettiObjectIndex < this.objects.confetti.length; confettiObjectIndex++) {
+            let confettiObject = this.objects.confetti[confettiObjectIndex];
+
+            if (!confettiObject.vars.active) {
+                confettiObject.trigger(position, direction);
+                break;
+            }
+        }
+    },
+    triggerDust: function(position, direction) {
+        /**
+         * Trigger dust particles.
+         * @param {object} position Object containing an x and y component representing the starting position of dust particles.
+         * @param {number} direction Number representing the angle in which dust particles are going to be launched in radians.
+         **/
+        for (let dustObjectIndex = 0; dustObjectIndex < this.objects.dust.length; dustObjectIndex++) {
+            let dustObject = this.objects.dust[dustObjectIndex];
+
+            if (!dustObject.vars.active) {
+                dustObject.trigger(position, direction);
+                break;
+            }
+        }
+    }
+}
+
+// Math
+Game.math = {
+    lineIntersection: function(line1, line2) {
+        /**
+         * Check if two lines intersects.
+         * @param {object[]} line1 with a length of 2 containing Objects with a x and y component representing the position of each point.
+         * @param {object[]} line2 with a length of 2 containing Objects with a x and y component representing the position of each point.
+         * @return {boolean}
+         * **/
+        let denominator = ((line1[1].x - line1[0].x) * (line2[1].y - line2[0].y)) - ((line1[1].y - line1[0].y) * (line2[1].x - line2[0].x));
+        let numerator1 = ((line1[0].y - line2[0].y) * (line2[1].x - line2[0].x)) - ((line1[0].x - line2[0].x) * (line2[1].y - line2[0].y));
+        let numerator2 = ((line1[0].y - line2[0].y) * (line1[1].x - line1[0].x)) - ((line1[0].x - line2[0].x) * (line1[1].y - line1[0].y));
+
+        if (denominator === 0) {
+            return numerator1 === 0 && numerator2 === 0;
+        }
+
+        let r = numerator1 / denominator;
+        let s = numerator2 / denominator;
+
+        return (0 <= r && r <= 1) && (0 <= s && s <= 1);
+    },
+    degToRad: function(deg) {
+        /**
+         * Convert degrees to radians
+         **/
+        return deg / 180 * Math.PI;
+    }
+}
 
 // Properties
 Game.properties = {
@@ -112,9 +177,9 @@ Game.properties = {
         colors: ["0x8DE0F2", "0x5BCCD9", "0xF2B33D", "0xF23D3D"],
         confettisPerPack: 10,
         numberOfPack: 20,
-        initialRotation: 10 / 180 * Math.PI,
+        initialRotation: Game.math.degToRad(10),
         initialSpeed: 10,
-        spread: 10 / 180 * Math.PI,
+        spread: Game.math.degToRad(10),
         gravity: {
             x: 0,
             y: 0.2
@@ -126,25 +191,9 @@ Game.properties = {
         color: "0xffffff",
         numberOfPack: 25,
         initialSpeed: 6,
-        spread: 20 / 180 * Math.PI
+        spread: Game.math.degToRad(20)
     }
 };
-
-// Math
-Game.collisionDetectionFunction = function(line1, line2) {
-    let denominator = ((line1[1].x - line1[0].x) * (line2[1].y - line2[0].y)) - ((line1[1].y - line1[0].y) * (line2[1].x - line2[0].x));
-    let numerator1 = ((line1[0].y - line2[0].y) * (line2[1].x - line2[0].x)) - ((line1[0].x - line2[0].x) * (line2[1].y - line2[0].y));
-    let numerator2 = ((line1[0].y - line2[0].y) * (line1[1].x - line1[0].x)) - ((line1[0].x - line2[0].x) * (line1[1].y - line1[0].y));
-
-    if (denominator === 0) {
-        return numerator1 === 0 && numerator2 === 0;
-    }
-
-    let r = numerator1 / denominator;
-    let s = numerator2 / denominator;
-
-    return (0 <= r && r <= 1) && (0 <= s && s <= 1);
-}
 
 // Initialization
 Game.init = function() {
@@ -179,34 +228,6 @@ Game.onload = function() {
             Game.camera.shake(20, 20, 200);
         }, 30);
     };
-    Game.triggerConfettis = function (position, direction) {
-        let confettiObjectHit = false;
-
-        for (let i = 0; i < Game.gameObjects.confettis.length && !confettiObjectHit; i++) {
-            if (!Game.gameObjects.confettis[i].vars.active) {
-                Game.gameObjects.confettis[i].trigger(position, direction);
-                confettiObjectHit = true;
-            }
-        }
-
-        if (!confettiObjectHit) {
-            console.log("Not Enough Confettis Object To Trigger Confettis");
-        }
-    }
-    Game.triggerDustParticles = function (position, direction) {
-        let dustObjectHit = false;
-
-        for (let i = 0; i < Game.gameObjects.dustParticles.length && !dustObjectHit; i++) {
-            if (!Game.gameObjects.dustParticles[i].vars.active) {
-                Game.gameObjects.dustParticles[i].trigger(position, direction);
-                dustObjectHit = true;
-            }
-        }
-
-        if (!dustObjectHit) {
-            console.log("Not Enough Dust Object To Trigger Dust Particles");
-        }
-    }
 
     // Mouse
     Game.camera.pointermove = function(pos) {
@@ -253,34 +274,17 @@ Game.onload = function() {
     };
 
     // Game Objects
-    Game.gameObjects.scriptHolder = new DE.GameObject({
-        vars: {
-            spawnAnimation: {
-                completed: false,
-                time: 0,
-                easedTime: 0,
-            },
-        },
-        x: 0,
-        y: 0,
-        automatisms: [["updateSpawnAnimationTime"]],
-        updateSpawnAnimationTime: function() {
-            if (!this.vars.spawnAnimation.completed) {
-                this.vars.spawnAnimation.time = Math.min(this.vars.spawnAnimation.time + Game.properties.spawnAnimation.speed, 1);
-                this.vars.spawnAnimation.easedTime = Game.properties.spawnAnimation.easingFunction(this.vars.spawnAnimation.time);
-
-                if (this.vars.spawnAnimation.time === 1) {
-                    this.vars.spawnAnimation.completed = true;
-                }
-            }
-        },
-    });
     Game.gameObjects.paddle = new DE.GameObject({
         vars: {
             keys: { left: 0, right: 0, active: true },
             targetHappiness: 1,
             happiness: 1,
             trackedBallIndex: 0,
+            spawnAnimation: {
+                completed: false,
+                time: 0,
+                easedTime: 0,
+            },
             mouse: {
                 target: 0,
             },
@@ -321,7 +325,7 @@ Game.onload = function() {
             );
         },
         updateMouse: function() {
-            if (!this.vars.keys.active && Game.gameObjects.scriptHolder.vars.spawnAnimation.completed) {
+            if (!this.vars.keys.active && this.vars.spawnAnimation.completed) {
                 let xBound = this.clamp(this.vars.mouse.target);
                 if (this.x < xBound) {
                     this.x += Math.min(xBound - this.x, Game.properties.paddle.mouse.speed);
@@ -331,7 +335,7 @@ Game.onload = function() {
             }
         },
         updateKeys: function() {
-            if (Game.gameObjects.scriptHolder.vars.spawnAnimation.completed) {
+            if (this.vars.spawnAnimation.completed) {
                 let movement = ((this.vars.keys.left > 0 ? -1 : 0) + (this.vars.keys.right > 0 ? 1 : 0)) * Game.properties.paddle.keyboard.speed;
                 this.x = this.clamp(this.x + movement);
             }
@@ -368,7 +372,7 @@ Game.onload = function() {
                     { x: this.x + this.vars.size.width / 2, y: this.y - this.vars.size.height }
                 ];
 
-                this.vars.targetHappiness = Game.collisionDetectionFunction(ballLines.bottomLeftCorner, top) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, top) ? 1 : 0;
+                this.vars.targetHappiness = Game.math.lineIntersection(ballLines.bottomLeftCorner, top) || Game.math.lineIntersection(ballLines.bottomRightCorner, top) ? 1 : 0;
             }
 
             if (this.vars.happiness > this.vars.targetHappiness) {
@@ -401,25 +405,25 @@ Game.onload = function() {
                 ],
             }
 
-            if (Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.top)) { // Top
+            if (Game.math.lineIntersection(ballLines.bottomLeftCorner, lines.top) || Game.math.lineIntersection(ballLines.bottomRightCorner, lines.top)) { // Top
                 collision = true;
                 newVelocity.y = -Math.abs(velocity.y);
-                Game.triggerConfettis({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2},{x: 0, y: -1});
-                Game.triggerDustParticles({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
+                Game.particles.triggerConfetti({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, Game.math.degToRad(-90));
+                Game.particles.triggerDust({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
             }
 
-            if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.left)) { // Left
+            if (Game.math.lineIntersection(ballLines.topRightCorner, lines.left) || Game.math.lineIntersection(ballLines.bottomRightCorner, lines.left)) { // Left
                 collision = true;
                 newVelocity.x = -Math.abs(velocity.x);
-                Game.triggerConfettis({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2},{x: -1, y: 0});
-                Game.triggerDustParticles({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
+                Game.particles.triggerConfetti({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, Game.math.degToRad(-180));
+                Game.particles.triggerDust({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
             }
 
-            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.right)) { // Right
+            if (Game.math.lineIntersection(ballLines.topLeftCorner, lines.right) || Game.math.lineIntersection(ballLines.bottomLeftCorner, lines.right)) { // Right
                 collision = true;
                 newVelocity.x = Math.abs(velocity.x);
-                Game.triggerConfettis({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2},{x: 1, y: 0});
-                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, newVelocity);
+                Game.particles.triggerConfetti({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2},Game.math.degToRad(0));
+                Game.particles.triggerDust({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
             }
 
             if (collision) {
@@ -427,7 +431,7 @@ Game.onload = function() {
             }
         },
         launchBall: function() {
-            if (Game.gameObjects.scriptHolder.vars.spawnAnimation.completed) {
+            if (this.vars.spawnAnimation.completed) {
                 for (let i = 0; i < Game.gameObjects.balls.length; i++) {
                     if (Game.gameObjects.balls[i].vars.stuck) {
                         Game.gameObjects.balls[i].vars.stuck = false;
@@ -438,12 +442,17 @@ Game.onload = function() {
             }
         },
         updateSpawnAnimation: function() {
-            if (!Game.gameObjects.scriptHolder.vars.spawnAnimation.completed) {
-                this.y =
-                    -Game.properties.paddle.verticalOffset +
-                    Game.gameObjects.scriptHolder.vars.spawnAnimation.easedTime * Game.properties.screen.size.height;
+            if (!this.vars.spawnAnimation.completed) {
+                this.vars.spawnAnimation.time = Math.min(this.vars.spawnAnimation.time + Game.properties.spawnAnimation.speed, 1);
+                this.vars.spawnAnimation.easedTime = Game.properties.spawnAnimation.easingFunction(this.vars.spawnAnimation.time);
+
+                if (this.vars.spawnAnimation.time === 1) {
+                    this.vars.spawnAnimation.completed = true;
+                }
+
+                this.y = -Game.properties.paddle.verticalOffset + this.vars.spawnAnimation.easedTime * Game.properties.screen.size.height;
             }
-        },
+        }
     });
     Game.gameObjects.walls = new DE.GameObject({
         x: 0,
@@ -484,29 +493,29 @@ Game.onload = function() {
                 ],
             }
 
-            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.topRightCorner, lines.top)) { // Top
+            if (Game.math.lineIntersection(ballLines.topLeftCorner, lines.top) || Game.math.lineIntersection(ballLines.topRightCorner, lines.top)) { // Top
                 collision = true;
                 newVelocity.y = Math.abs(velocity.y);
-                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.topRightCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.topRightCorner[0].y) / 2}, newVelocity);
+                Game.particles.triggerDust({x: (ballLines.topLeftCorner[0].x + ballLines.topRightCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.topRightCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
             }
 
-            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.left)) { // Left
+            if (Game.math.lineIntersection(ballLines.topLeftCorner, lines.left) || Game.math.lineIntersection(ballLines.bottomLeftCorner, lines.left)) { // Left
                 collision = true;
                 newVelocity.x = Math.abs(velocity.x);
-                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, newVelocity);
+                Game.particles.triggerDust({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
             }
 
-            if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.right)) { // Right
+            if (Game.math.lineIntersection(ballLines.topRightCorner, lines.right) || Game.math.lineIntersection(ballLines.bottomRightCorner, lines.right)) { // Right
                 collision = true;
                 newVelocity.x = -Math.abs(velocity.x);
-                Game.triggerDustParticles({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
+                Game.particles.triggerDust({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
             }
 
             if (collision) {
                 Game.camera.triggerWallsShake();
                 return newVelocity;
             }
-        },
+        }
     });
     Game.gameObjects.balls = [];
     Game.gameObjects.balls.push(
@@ -627,14 +636,13 @@ Game.onload = function() {
                     x: (Math.random() > 0.5 ? -1 : 1) * (Math.floor(Math.random() * (15 - 5)) + 5),
                     y: -20,
                 };
-            },
+            }
         }),
     );
     Game.gameObjects.bricks = [];
-    let xOffset =
-        Game.properties.screen.size.width / 2 -
-        (Game.properties.bricks.width * Game.properties.bricks.rows + Game.properties.bricks.spacing * (Game.properties.bricks.rows - 1)) / 2 +
-        Game.properties.bricks.width / 2;
+    let xOffset = Game.properties.screen.size.width / 2 -
+      (Game.properties.bricks.width * Game.properties.bricks.rows + Game.properties.bricks.spacing * (Game.properties.bricks.rows - 1)) / 2 +
+      Game.properties.bricks.width / 2;
     for (let x = 0; x < Game.properties.bricks.rows; x++) {
         for (let y = 0; y < Game.properties.bricks.lines; y++) {
             let initialRotation = (Math.PI / 4) * (Math.random() > 0.5 ? -1 : 1);
@@ -720,28 +728,28 @@ Game.onload = function() {
                                 ],
                             }
 
-                            if (Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.top)) { // Top
+                            if (Game.math.lineIntersection(ballLines.bottomLeftCorner, lines.top) || Game.math.lineIntersection(ballLines.bottomRightCorner, lines.top)) { // Top
                                 collision = true;
                                 newVelocity.y = -Math.abs(velocity.y);
-                                Game.triggerDustParticles({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
+                                Game.particles.triggerDust({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
                             }
 
-                            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.bottom) || Game.collisionDetectionFunction(ballLines.topRightCorner, lines.bottom)) { // Bottom
+                            if (Game.math.lineIntersection(ballLines.topLeftCorner, lines.bottom) || Game.math.lineIntersection(ballLines.topRightCorner, lines.bottom)) { // Bottom
                                 collision = true;
                                 newVelocity.y = Math.abs(velocity.y);
-                                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.topRightCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.topRightCorner[0].y) / 2}, newVelocity);
+                                Game.particles.triggerDust({x: (ballLines.topLeftCorner[0].x + ballLines.topRightCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.topRightCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
                             }
 
-                            if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.left)) { // Left
+                            if (Game.math.lineIntersection(ballLines.topRightCorner, lines.left) || Game.math.lineIntersection(ballLines.bottomRightCorner, lines.left)) { // Left
                                 collision = true;
                                 newVelocity.x = -Math.abs(velocity.x);
-                                Game.triggerDustParticles({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
+                                Game.particles.triggerDust({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
                             }
 
-                            if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.right)) { // Right
+                            if (Game.math.lineIntersection(ballLines.topLeftCorner, lines.right) || Game.math.lineIntersection(ballLines.bottomLeftCorner, lines.right)) { // Right
                                 collision = true;
                                 newVelocity.x = Math.abs(velocity.x);
-                                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, newVelocity);
+                                Game.particles.triggerDust({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, Math.atan2(newVelocity.y, newVelocity.x));
                             }
 
                             if (collision) {
@@ -773,7 +781,6 @@ Game.onload = function() {
         }
     }
 
-    Game.gameObjects.confettis = [];
     for (let i = 0; i < Game.properties.confettis.numberOfPack; i++) {
         let confettis = [];
         for (let j = 0; j < Game.properties.confettis.confettisPerPack; j++) {
@@ -796,7 +803,7 @@ Game.onload = function() {
             }));
         }
 
-        Game.gameObjects.confettis.push(new DE.GameObject({
+        Game.particles.objects.confetti.push(new DE.GameObject({
             x: 0,
             y: 0,
             vars: {
@@ -813,7 +820,7 @@ Game.onload = function() {
                     this.gameObjects[i].x = 0;
                     this.gameObjects[i].y = 0;
 
-                    let rotation = Math.atan2(direction.y, direction.x) + (Math.random() - 0.5) * 2 * Game.properties.confettis.spread;
+                    let rotation = direction + (Math.random() - 0.5) * 2 * Game.properties.confettis.spread;
                     let speed = Game.properties.confettis.initialSpeed * (Math.random() / 2 + 0.5);
                     this.gameObjects[i].vars.velocity = {x: Math.cos(rotation) * speed, y: Math.sin(rotation) * speed, r: (Math.random() - 0.5) * 2 * Game.properties.confettis.initialRotation};
                     this.gameObjects[i].vars.active = true;
@@ -853,7 +860,6 @@ Game.onload = function() {
         }));
     }
 
-    Game.gameObjects.dustParticles = [];
     for (let i = 0; i < Game.properties.dustParticles.numberOfPack; i++) {
         let dustParticles = [];
 
@@ -876,7 +882,7 @@ Game.onload = function() {
             }));
         }
 
-        Game.gameObjects.dustParticles.push(new DE.GameObject({
+        Game.particles.objects.dust.push(new DE.GameObject({
             x: 0,
             y: 0,
             vars: {
@@ -893,7 +899,7 @@ Game.onload = function() {
                     this.gameObjects[i].x = 0;
                     this.gameObjects[i].y = 0;
 
-                    let rotation = Math.atan2(direction.y, direction.x) + (i - 1) * Game.properties.dustParticles.spread;
+                    let rotation = direction + (i - 1) * Game.properties.dustParticles.spread;
                     let speed = Game.properties.dustParticles.initialSpeed;
                     this.gameObjects[i].vars.velocity = {x: Math.cos(rotation) * speed, y: Math.sin(rotation) * speed};
                     this.gameObjects[i].vars.active = true;
@@ -939,7 +945,7 @@ Game.onload = function() {
     }
 
     // Add GameObjects to scene
-    Game.scene.add(Game.gameObjects.walls, Game.gameObjects.paddle, Game.gameObjects.bricks, Game.gameObjects.balls, Game.gameObjects.confettis, Game.gameObjects.dustParticles, Game.gameObjects.scriptHolder);
+    Game.scene.add(Game.gameObjects.paddle, Game.gameObjects.balls, Game.gameObjects.walls, Game.gameObjects.bricks, Game.particles.objects.dust, Game.particles.objects.confetti);
 };
 
 // just for helping debugging stuff, never do this ;)
