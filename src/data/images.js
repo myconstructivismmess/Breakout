@@ -23,16 +23,8 @@ const images = {
     default: [
       // [ "example", "example", "png", { "totalFrame": 4, "totalLine": 2, "interval": 50, "animated":true, "isReversed": false } ]
       // [ "ship", "ayera/ship.png", { "totalFrame": 10, "totalLine": 1, "interval": 100, "animated":true, "isReversed": false } ]
-      [ "ayeraShip", "shmup/ayera-ship.png" ],
-      [ "player-bullet", "shmup/p-bullet.png", { "totalFrame": 10, "interval": 50, "animated": true, "loop": false } ],
-      [ "heart", "shmup/heart.png" ],
-      [ "target", "shmup/target.png" ],
-      [ "reactor", "shmup/reactor.png", { "totalFrame": 4, "interval": 40, "animated": true } ],
-      "shmup/ship.json",
-      
-      [ "bg", "env/bg.jpg", { "totalFrame": 1, "animated":false, "isReversed": false } ],
-      [ "canyon", "env/canyon.png", { "totalFrame": 1, "animated":false, "isReversed": false } ],
-      [ "grass", "env/grass.png", { "totalFrame": 1, "animated":false, "isReversed": false } ],
+      [ "mouth", "mouth.png" ],
+
       [ "touchControlBackground", "touch-control/background.png", { "totalFrame": 1, "animated": false } ],
       [ "touchControlStick", "touch-control/stick.png", { "totalFrame": 1, "animated": false } ],
       

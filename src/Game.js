@@ -18,7 +18,8 @@ Game.gameObjects = {
     bricks: null,
     balls: null,
     walls: null,
-    confetti: null,
+    confettis: null,
+    dustParticles: null,
     scriptHolder: null,
 };
 
@@ -66,7 +67,7 @@ Game.properties = {
             color: "0xffffff",
             iris: {
                 radius: 23,
-                spacing: 5,
+                spacing: 3,
                 color: "0x000000"
             }
         },
@@ -104,7 +105,29 @@ Game.properties = {
             }
         }
     },
-    confetti: {},
+    confettis: {
+        size: 20,
+        ratio: 3 / 1,
+        duration: 5,
+        colors: ["0x8DE0F2", "0x5BCCD9", "0xF2B33D", "0xF23D3D"],
+        confettisPerPack: 10,
+        numberOfPack: 20,
+        initialRotation: 10 / 180 * Math.PI,
+        initialSpeed: 10,
+        spread: 10 / 180 * Math.PI,
+        gravity: {
+            x: 0,
+            y: 0.2
+        }
+    },
+    dustParticles: {
+        size: 24,
+        duration: 0.5,
+        color: "0xffffff",
+        numberOfPack: 25,
+        initialSpeed: 6,
+        spread: 20 / 180 * Math.PI
+    }
 };
 
 // Math
@@ -156,6 +179,34 @@ Game.onload = function() {
             Game.camera.shake(20, 20, 200);
         }, 30);
     };
+    Game.triggerConfettis = function (position, direction) {
+        let confettiObjectHit = false;
+
+        for (let i = 0; i < Game.gameObjects.confettis.length && !confettiObjectHit; i++) {
+            if (!Game.gameObjects.confettis[i].vars.active) {
+                Game.gameObjects.confettis[i].trigger(position, direction);
+                confettiObjectHit = true;
+            }
+        }
+
+        if (!confettiObjectHit) {
+            console.log("Not Enough Confettis Object To Trigger Confettis");
+        }
+    }
+    Game.triggerDustParticles = function (position, direction) {
+        let dustObjectHit = false;
+
+        for (let i = 0; i < Game.gameObjects.dustParticles.length && !dustObjectHit; i++) {
+            if (!Game.gameObjects.dustParticles[i].vars.active) {
+                Game.gameObjects.dustParticles[i].trigger(position, direction);
+                dustObjectHit = true;
+            }
+        }
+
+        if (!dustObjectHit) {
+            console.log("Not Enough Dust Object To Trigger Dust Particles");
+        }
+    }
 
     // Mouse
     Game.camera.pointermove = function(pos) {
@@ -227,6 +278,8 @@ Game.onload = function() {
     Game.gameObjects.paddle = new DE.GameObject({
         vars: {
             keys: { left: 0, right: 0, active: true },
+            targetHappiness: 1,
+            happiness: 1,
             trackedBallIndex: 0,
             mouse: {
                 target: 0,
@@ -238,7 +291,7 @@ Game.onload = function() {
         },
         x: Game.properties.screen.size.width / 2,
         y: -Game.properties.paddle.verticalOffset,
-        automatisms: [["updateMouse"], ["updateKeys"], ["updateSpawnAnimation"], ["updateEyes"]],
+        automatisms: [["updateMouse"], ["updateKeys"], ["updateSpawnAnimation"], ["updateEyes"], ["updateMouth"]],
         renderers: [
             new DE.RectRenderer(Game.properties.paddle.width, Game.properties.paddle.height, Game.properties.paddle.colors.default, {
                 fill: true,
@@ -246,7 +299,8 @@ Game.onload = function() {
                 y: -Game.properties.paddle.height,
             }),
             new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [-Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[0].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[0].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}]),
-            new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[1].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[1].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}])
+            new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[1].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[1].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}]),
+            new DE.SpriteRenderer({x: 0, y: -Game.properties.paddle.height / 2, spriteName: 'mouth', scaleX: 0.025, scaleY: 0.025 })
         ],
         gameObjects: [
             new DE.GameObject({
@@ -260,10 +314,6 @@ Game.onload = function() {
                 renderer: new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.iris.color}, {"drawCircle": [0, 0, Game.properties.paddle.eyes.iris.radius]}, {"endFill": []}])
             }),
         ],
-            //new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [-Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[0].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[0].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}]),
-            /*new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.color}, {"drawCircle": [Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[1].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[1].y, Game.properties.paddle.eyes.radius]}, {"endFill": []}]),
-            new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.iris.color}, {"drawCircle": [-Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[0].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[0].y - Game.properties.paddle.eyes.radius + Game.properties.paddle.eyes.iris.radius + Game.properties.paddle.eyes.iris.spacing, Game.properties.paddle.eyes.iris.radius]}, {"endFill": []}]),
-            new DE.GraphicRenderer([{"beginFill": Game.properties.paddle.eyes.iris.color}, {"drawCircle": [Game.properties.paddle.width / 2 + Game.properties.paddle.eyes.offsets[1].x, -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[1].y - Game.properties.paddle.eyes.radius + Game.properties.paddle.eyes.iris.radius + Game.properties.paddle.eyes.iris.spacing, Game.properties.paddle.eyes.iris.radius]}, {"endFill": []}])*/
         clamp: function(x) {
             return Math.min(
                 Math.max(x, Game.properties.walls.width + Game.properties.paddle.width / 2),
@@ -300,6 +350,38 @@ Game.onload = function() {
                 this.gameObjects[i].y = -Game.properties.paddle.height + Game.properties.paddle.eyes.offsets[i].y + eyesBallOffsetNormalized.y * (Game.properties.paddle.eyes.radius - Game.properties.paddle.eyes.iris.radius - Game.properties.paddle.eyes.iris.spacing);
             }
         },
+        updateMouth: function() {
+            if (Game.gameObjects.balls[this.vars.trackedBallIndex].vars.velocity.y > 0) {
+                let ballLines = {
+                    bottomLeftCorner: [
+                        {x: (Game.gameObjects.balls[this.vars.trackedBallIndex].x - Game.properties.balls.size / 2), y: (Game.gameObjects.balls[this.vars.trackedBallIndex].y + Game.properties.balls.size / 2)},
+                        {x: (Game.gameObjects.balls[this.vars.trackedBallIndex].x - Game.properties.balls.size / 2 + Game.gameObjects.balls[this.vars.trackedBallIndex].vars.velocity.x * 2000), y: (Game.gameObjects.balls[this.vars.trackedBallIndex].y + Game.properties.balls.size / 2 + Game.gameObjects.balls[this.vars.trackedBallIndex].vars.velocity.y * 2000)},
+                    ],
+                    bottomRightCorner: [
+                        {x: (Game.gameObjects.balls[this.vars.trackedBallIndex].x + Game.properties.balls.size / 2), y: (Game.gameObjects.balls[this.vars.trackedBallIndex].y + Game.properties.balls.size / 2)},
+                        {x: (Game.gameObjects.balls[this.vars.trackedBallIndex].x + Game.properties.balls.size / 2 + Game.gameObjects.balls[this.vars.trackedBallIndex].vars.velocity.x * 2000), y: (Game.gameObjects.balls[this.vars.trackedBallIndex].y + Game.properties.balls.size / 2 + Game.gameObjects.balls[this.vars.trackedBallIndex].vars.velocity.y * 2000)},
+                    ]
+                };
+
+                let top = [
+                    { x: this.x - this.vars.size.width / 2, y: this.y - this.vars.size.height },
+                    { x: this.x + this.vars.size.width / 2, y: this.y - this.vars.size.height }
+                ];
+
+                this.vars.targetHappiness = Game.collisionDetectionFunction(ballLines.bottomLeftCorner, top) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, top) ? 1 : 0;
+            }
+
+            if (this.vars.happiness > this.vars.targetHappiness) {
+                this.vars.happiness = Math.max(this.vars.happiness - 0.010, this.vars.targetHappiness);
+            } else if (this.vars.happiness < this.vars.targetHappiness) {
+                this.vars.happiness = Math.min(this.vars.happiness + 0.02, this.vars.targetHappiness);
+            }
+
+            if (this.vars.happiness > 0) {
+                this.vars.happiness = Math.max(this.vars.happiness - 0.010, 0);
+                this.renderers[3].setScale(0.025, 0.005 + (this.vars.happiness < 0.5 ? 4 * Math.pow(this.vars.happiness, 3) : 1 - Math.pow(-2 * this.vars.happiness + 2, 3) / 2) * (0.025 - 0.005));
+            }
+        },
         checkCollision: function(ballLines, velocity) {
             let collision = false;
             let newVelocity = { x: velocity.x, y: velocity.y };
@@ -322,16 +404,22 @@ Game.onload = function() {
             if (Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.top)) { // Top
                 collision = true;
                 newVelocity.y = -Math.abs(velocity.y);
+                Game.triggerConfettis({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2},{x: 0, y: -1});
+                Game.triggerDustParticles({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
             }
 
             if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.left)) { // Left
                 collision = true;
                 newVelocity.x = -Math.abs(velocity.x);
+                Game.triggerConfettis({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2},{x: -1, y: 0});
+                Game.triggerDustParticles({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
             }
 
             if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.right)) { // Right
                 collision = true;
                 newVelocity.x = Math.abs(velocity.x);
+                Game.triggerConfettis({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2},{x: 1, y: 0});
+                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, newVelocity);
             }
 
             if (collision) {
@@ -399,16 +487,19 @@ Game.onload = function() {
             if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.topRightCorner, lines.top)) { // Top
                 collision = true;
                 newVelocity.y = Math.abs(velocity.y);
+                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.topRightCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.topRightCorner[0].y) / 2}, newVelocity);
             }
 
             if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.left)) { // Left
                 collision = true;
                 newVelocity.x = Math.abs(velocity.x);
+                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, newVelocity);
             }
 
             if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.right)) { // Right
                 collision = true;
                 newVelocity.x = -Math.abs(velocity.x);
+                Game.triggerDustParticles({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
             }
 
             if (collision) {
@@ -589,7 +680,7 @@ Game.onload = function() {
                         {
                             x: -Game.properties.bricks.width / 2,
                             y: -Game.properties.bricks.height / 2,
-                            fill: true,
+                            fill: true
                         },
                     ),
                     updateSpawnAnimationTime: function() {
@@ -632,21 +723,25 @@ Game.onload = function() {
                             if (Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.top) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.top)) { // Top
                                 collision = true;
                                 newVelocity.y = -Math.abs(velocity.y);
+                                Game.triggerDustParticles({x: (ballLines.bottomLeftCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.bottomLeftCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
                             }
 
                             if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.bottom) || Game.collisionDetectionFunction(ballLines.topRightCorner, lines.bottom)) { // Bottom
                                 collision = true;
                                 newVelocity.y = Math.abs(velocity.y);
+                                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.topRightCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.topRightCorner[0].y) / 2}, newVelocity);
                             }
 
                             if (Game.collisionDetectionFunction(ballLines.topRightCorner, lines.left) || Game.collisionDetectionFunction(ballLines.bottomRightCorner, lines.left)) { // Left
                                 collision = true;
                                 newVelocity.x = -Math.abs(velocity.x);
+                                Game.triggerDustParticles({x: (ballLines.topRightCorner[0].x + ballLines.bottomRightCorner[0].x) / 2, y: (ballLines.topRightCorner[0].y + ballLines.bottomRightCorner[0].y) / 2}, newVelocity);
                             }
 
                             if (Game.collisionDetectionFunction(ballLines.topLeftCorner, lines.right) || Game.collisionDetectionFunction(ballLines.bottomLeftCorner, lines.right)) { // Right
                                 collision = true;
                                 newVelocity.x = Math.abs(velocity.x);
+                                Game.triggerDustParticles({x: (ballLines.topLeftCorner[0].x + ballLines.bottomLeftCorner[0].x) / 2, y: (ballLines.topLeftCorner[0].y + ballLines.bottomLeftCorner[0].y) / 2}, newVelocity);
                             }
 
                             if (collision) {
@@ -678,8 +773,173 @@ Game.onload = function() {
         }
     }
 
+    Game.gameObjects.confettis = [];
+    for (let i = 0; i < Game.properties.confettis.numberOfPack; i++) {
+        let confettis = [];
+        for (let j = 0; j < Game.properties.confettis.confettisPerPack; j++) {
+            confettis.push(new DE.GameObject({
+                x: 0,
+                y: 0,
+                visible: false,
+                vars: {
+                    velocity: {
+                        x: 0,
+                        y: 0,
+                        r: 0
+                    }
+                },
+                renderer: new DE.RectRenderer(Game.properties.confettis.size, Game.properties.confettis.size / Game.properties.confettis.ratio, Game.properties.confettis.colors[Math.floor(Math.random() * Game.properties.confettis.colors.length)], {
+                    x: -Game.properties.confettis.size / 2,
+                    y: -Game.properties.confettis.size / Game.properties.confettis.ratio / 2,
+                    fill: true
+                })
+            }));
+        }
+
+        Game.gameObjects.confettis.push(new DE.GameObject({
+            x: 0,
+            y: 0,
+            vars: {
+                active: false,
+                timer: 0
+            },
+            automatisms: [["update"]],
+            gameObjects: confettis,
+            trigger: function(location, direction) {
+                this.x = location.x;
+                this.y = location.y;
+
+                for (let i = 0; i < this.gameObjects.length; i++) {
+                    this.gameObjects[i].x = 0;
+                    this.gameObjects[i].y = 0;
+
+                    let rotation = Math.atan2(direction.y, direction.x) + (Math.random() - 0.5) * 2 * Game.properties.confettis.spread;
+                    let speed = Game.properties.confettis.initialSpeed * (Math.random() / 2 + 0.5);
+                    this.gameObjects[i].vars.velocity = {x: Math.cos(rotation) * speed, y: Math.sin(rotation) * speed, r: (Math.random() - 0.5) * 2 * Game.properties.confettis.initialRotation};
+                    this.gameObjects[i].vars.active = true;
+                }
+
+                this.vars.active = true;
+            },
+            update: function() {
+                if (this.vars.active) {
+                    this.vars.timer += 0.0166;
+
+                    for (let i = 0; i < this.gameObjects.length; i++) {
+                        this.gameObjects[i].visible = true;
+                        this.gameObjects[i].x += this.gameObjects[i].vars.velocity.x;
+                        this.gameObjects[i].y += this.gameObjects[i].vars.velocity.y;
+                        this.gameObjects[i].rotation += this.gameObjects[i].vars.velocity.r;
+                        this.gameObjects[i].renderer.setScale(1, Math.cos(this.gameObjects[i].rotation));
+
+                        this.gameObjects[i].vars.velocity.x += Game.properties.confettis.gravity.x;
+                        this.gameObjects[i].vars.velocity.y += Game.properties.confettis.gravity.y;
+                    }
+
+                    if (this.vars.timer > Game.properties.confettis.duration) {
+                        this.vars.timer = 0;
+                        this.vars.active = false;
+
+                        for (let i = 0; i < this.gameObjects.length; i++) {
+                            this.gameObjects[i].vars.active = false;
+                        }
+                    }
+                } else {
+                    for (let i = 0; i < this.gameObjects.length; i++) {
+                        this.gameObjects[i].visible = false;
+                    }
+                }
+            }
+        }));
+    }
+
+    Game.gameObjects.dustParticles = [];
+    for (let i = 0; i < Game.properties.dustParticles.numberOfPack; i++) {
+        let dustParticles = [];
+
+        for (let j = 0; j < 3; j++) {
+            dustParticles.push(new DE.GameObject({
+                x: 0,
+                y: 0,
+                visible: false,
+                vars: {
+                    velocity: {
+                        x: 0,
+                        y: 0
+                    }
+                },
+                renderer: new DE.RectRenderer(Game.properties.dustParticles.size, Game.properties.dustParticles.size, Game.properties.dustParticles.color, {
+                    x: -Game.properties.dustParticles.size / 2,
+                    y: -Game.properties.dustParticles.size / 2,
+                    fill: true
+                })
+            }));
+        }
+
+        Game.gameObjects.dustParticles.push(new DE.GameObject({
+            x: 0,
+            y: 0,
+            vars: {
+                active: false,
+                timer: 0
+            },
+            automatisms: [["update"]],
+            gameObjects: dustParticles,
+            trigger: function(location, direction) {
+                this.x = location.x;
+                this.y = location.y;
+
+                for (let i = 0; i < this.gameObjects.length; i++) {
+                    this.gameObjects[i].x = 0;
+                    this.gameObjects[i].y = 0;
+
+                    let rotation = Math.atan2(direction.y, direction.x) + (i - 1) * Game.properties.dustParticles.spread;
+                    let speed = Game.properties.dustParticles.initialSpeed;
+                    this.gameObjects[i].vars.velocity = {x: Math.cos(rotation) * speed, y: Math.sin(rotation) * speed};
+                    this.gameObjects[i].vars.active = true;
+                }
+
+                this.vars.active = true;
+            },
+            update: function() {
+                if (this.vars.active) {
+                    this.vars.timer += 0.0166;
+
+                    for (let i = 0; i < this.gameObjects.length; i++) {
+                        this.gameObjects[i].visible = true;
+                        this.gameObjects[i].x += this.gameObjects[i].vars.velocity.x;
+                        this.gameObjects[i].y += this.gameObjects[i].vars.velocity.y;
+
+                        this.gameObjects[i].alpha = 1 - this.vars.timer / Game.properties.dustParticles.duration;
+
+                        this.gameObjects[i].renderer.updateRender({
+                            width: (1 - this.vars.timer / Game.properties.dustParticles.duration) * Game.properties.dustParticles.size,
+                            height: (1 - this.vars.timer / Game.properties.dustParticles.duration) * Game.properties.dustParticles.size
+                        });
+
+                        this.gameObjects[i].vars.velocity.x /= 1.09;
+                        this.gameObjects[i].vars.velocity.y /= 1.09;
+                    }
+
+                    if (this.vars.timer > Game.properties.dustParticles.duration) {
+                        this.vars.timer = 0;
+                        this.vars.active = false;
+
+                        for (let i = 0; i < this.gameObjects.length; i++) {
+                            this.gameObjects[i].vars.active = false;
+                        }
+                    }
+                } else {
+                    for (let i = 0; i < this.gameObjects.length; i++) {
+                        this.gameObjects[i].visible = false;
+                    }
+                }
+            }
+        }));
+    }
+
     // Add GameObjects to scene
-    Game.scene.add(Game.gameObjects.walls, Game.gameObjects.paddle, Game.gameObjects.bricks, Game.gameObjects.balls, Game.gameObjects.scriptHolder);
+    Game.scene.add(Game.gameObjects.walls, Game.gameObjects.paddle, Game.gameObjects.bricks, Game.gameObjects.balls, Game.gameObjects.confettis, Game.gameObjects.dustParticles, Game.gameObjects.scriptHolder);
 };
 
 /*Game.ship = null;
